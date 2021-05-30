@@ -1,9 +1,21 @@
 package structure;
 
 public class Edge {
+    /**
+     * 该边的尾节点
+     */
     Event from;
+    /**
+     * 改边的头节点
+     */
     Event to;
+    /**
+     * from与to之间时序距离的下界
+     */
     int lb;
+    /**
+     * from与to之间时序距离的上界
+     */
     int ub;
 
     public Edge(Event from, Event to, int lb, int ub) {

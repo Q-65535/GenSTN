@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class GraphGenerator implements Generator{
+public class GraphGenerator implements Generator {
     /**
      * 生成的DAG的数量
      */
@@ -27,6 +27,14 @@ public class GraphGenerator implements Generator{
      * 每个DAG中边的数量
      */
     private int num_edge = 10;
+    /**
+     * 每个event的最大入边数量
+     */
+    private int num_maxInEdge = 2;
+    /**
+     * 每个event的最大出边数量
+     */
+    private int num_maxOutEdge = 2;
 //    /**
 //     * 对event进行分组，属于同一个DAG的在一组
 //     */
@@ -43,7 +51,7 @@ public class GraphGenerator implements Generator{
     /**
      * event标号
      */
-    private int eventNumber=0;
+    private int eventNumber = 0;
 
     public GraphGenerator() {
 
@@ -77,7 +85,7 @@ public class GraphGenerator implements Generator{
         this.num_event = num_event;
         this.num_literal = num_literal;
         this.num_edge = num_edge;
-        this.eventNumber=0;
+        this.eventNumber = 0;
         return generate();
     }
 
@@ -176,6 +184,7 @@ public class GraphGenerator implements Generator{
     }
 
     private Event genGraph(ArrayList<Event> events, int edgeNum) {
+        ArrayList<Edge> edgeSequence = new ArrayList<>();
         int fromIndex;
         int toIndex;
         int count = 0;
@@ -183,55 +192,120 @@ public class GraphGenerator implements Generator{
         for (int i = 1; i < events.size(); i++) {
             //头节点
             Event to = events.get(i);
-            //随机选择之前的一个节点作为尾节点
-            fromIndex = rm.nextInt(i);
-            Event from = events.get(fromIndex);
+            ArrayList<Event> firstAvailableFroms = new ArrayList<>();
+            for (Event from : events.subList(0, i)) {
+                boolean satisfy = !(to.getFrom().contains(from)
+                        || from.getReachableEvents().contains(to)
+                        || from.upperLinkReachable(to)
+                        || to.lowerLinkReachable(from)
+                        || from.getOutEdges().size() >= num_maxOutEdge);
+                if (satisfy) {
+                    firstAvailableFroms.add(from);
+                }
+            }
+            if (firstAvailableFroms.size() > 0) {
+                //随机选择之前的一个节点作为尾节点
+                fromIndex = rm.nextInt(firstAvailableFroms.size());
+                Event from = firstAvailableFroms.get(fromIndex);
 //            //若俩节点已经是可达的，则继续搜索
 //            while (from.getReachableEvents().contains(to)) {
 //                fromIndex = rm.nextInt(i);
 //                from = events.get(fromIndex);
 //            }
-            to.getFrom().add(from);
-            from.getTo().add(to);
-            //添加新生成的边
-            Edge edge = new Edge(from, to);
-            to.addInEdge(edge);
-            from.addOutEdge(edge);
-            //对尾节点递归地更新可达节点
-            from.updateReachable(to);
-            count++;
+                to.getFrom().add(from);
+                from.getTo().add(to);
+                //添加新生成的边
+                Edge edge = new Edge(from, to);
+//                edgeSequence.add(edge);
+                to.addInEdge(edge);
+                from.addOutEdge(edge);
+                //对尾节点递归地更新可达节点
+                from.updateReachable(to);
+                count++;
+                System.out.println(edge.getFrom().getName() + "--->" + edge.getTo().getName());
+            }
+        }
+
+        //用于记录可作为头节点的event，在接下来的while循环中会不断更新
+        ArrayList<Event> availableTos = new ArrayList<>(events.subList(2, events.size()));
+        for (Event availableTo : availableTos) {
+
         }
         // 如果边的数量没有达到edgNum, 添加更多的边
         outer:
         while (count < edgeNum) {
-            //随机选择一个节点作为头节点
-            toIndex = rm.nextInt(events.size());
-            while (toIndex == 0) toIndex = rm.nextInt(events.size());
-            Event to = events.get(toIndex);
-            //记录搜索尾节点的次数（确定头节点后，随机搜索可用的尾节点）
-            int searchCount = 0;
-            fromIndex = rm.nextInt(toIndex);
-            Event from = events.get(fromIndex);
-            //如果这两个节点已经相连或者是可达或添加该边后会造成多余边，则继续搜索
-            while (to.getFrom().contains(from)||from.getReachableEvents().contains(to)||from.direcReachable(to)) {
-                fromIndex = rm.nextInt(toIndex);
-                from = events.get(fromIndex);
-                searchCount++;
-                //如果搜索次数过多，则放弃搜索，选择其它的节点作为头节点
-                if (searchCount > 2 * toIndex) continue outer;
-            }
-            //将选出的尾节点与头节点相连
-            to.getFrom().add(from);
-            from.getTo().add(to);
+            //更新可作为头节点的event
+            for (int i = 0; i < availableTos.size(); i++)
+                //如果该节点的入边数量超过上限，则将其移除
+                if (events.get(i).getInEdges().size() >= num_maxInEdge) availableTos.remove(i);
+            //如果有可作为头节点的event
+            if (availableTos.size() > 0) {
+                //在availableTos中随机选择一个event作为头节点
+                toIndex = rm.nextInt(availableTos.size());
+                Event to = availableTos.get(toIndex);
+                System.out.println("to node selected: "+to.getName());
+                //用于记录可作为尾节点的event
+                ArrayList<Event> secondAvailableFroms = new ArrayList<>();
+//                for (Event from : events.subList(0, events.indexOf(to)))
+                for (Event from : events){
+                    Event.checkFromTo(from,to,num_maxOutEdge);
+                    boolean satisfy = !(to.equals(from)//检查是否相同
+                            ||to.getFrom().contains(from)//检查是否已经相连
+                            || from.getReachableEvents().contains(to)//检查是否已经可达
+                            || from.upperLinkReachable(to)
+                            || to.lowerLinkReachable(from)
+                            || from.getOutEdges().size() >= num_maxOutEdge);
+                    if (satisfy) {
+                        System.out.println("this from node: "+from.getName()+" is applicable!!!!!!");
+                        secondAvailableFroms.add(from);
+                    }else System.out.println("this from node: "+from.getName()+" is not applicable");
+                }
+                //对于选定的头节点，如果有可作为尾节点的event，则将其相连
+                if (secondAvailableFroms.size() > 0) {
+                    System.out.println("available froms is not empty!");
+                    fromIndex = rm.nextInt(secondAvailableFroms.size());
+                    Event from = secondAvailableFroms.get(fromIndex);
+                    to.getFrom().add(from);
+                    from.getTo().add(to);
 
-            Edge edge = new Edge(from, to);
-            to.addInEdge(edge);
-            from.addOutEdge(edge);
-            //对尾节点递归地更新可达节点
-            from.updateReachable(to);
-            count++;
+                    Edge edge = new Edge(from, to);
+//                edgeSequence.add(edge);
+
+                    to.addInEdge(edge);
+                    from.addOutEdge(edge);
+                    //对尾节点递归地更新可达节点
+                    from.updateReachable(to);
+                    System.out.println(edge.getFrom().getName() + "--->" + edge.getTo().getName());
+                    count++;
+                    //否则将该选中的头节从availableTos中移除
+                } else {
+                    availableTos.remove(toIndex);
+                    continue outer;
+                }
+                //如果availableTos为空，即没有可作为头节点的event
+            } else {
+                System.out.println("no event to be selected as head node! break!");
+                break;
+            }
+
+
+//            //记录搜索尾节点的次数（确定头节点后，随机搜索可用的尾节点）
+//            int searchCount = 0;
+//
+//            //如果这两个节点已经相连或者是可达或添加该边后会造成多余边，则继续搜索
+//            while (to.getFrom().contains(from) || from.getReachableEvents().contains(to) || from.upperLinkReachable(to)) {
+//                fromIndex = rm.nextInt(toIndex);
+//                from = events.get(fromIndex);
+//                searchCount++;
+//                //如果搜索次数过多，则放弃搜索，选择其它的节点作为头节点
+//                if (searchCount > 2 * toIndex) continue outer;
+//            }
+            //将选出的尾节点与头节点相连
 
         }
+//        for (Edge edge : edgeSequence) {
+//            System.out.println(edge.getFrom().getName()+"--->"+edge.getTo().getName());
+//        }
         return events.get(0);
     }
 

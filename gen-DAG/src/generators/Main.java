@@ -25,7 +25,7 @@ public class Main {
         }
         //转化为uml文件，方便可视化
         String UMLString=GraphGenerator.convertToDotE("graph1", eventGroup);
-        System.out.println(UMLString);
+//        System.out.println(UMLString);
         GraphGenerator.graphWrite(UMLString);
 
     }
