@@ -19,14 +19,12 @@ public class Main {
         ArrayList<Event> eventGroup=eventGroups.get(0);
         //打印分组后的所有变量
         System.out.println(gen.envGroups);
-        //打印一个event组中每个event包含的所有literal
+        //打印eventGroup中每个event包含的所有literal
         for (Event event : eventGroup) {
             System.out.println(event.getLiterals());
         }
         //转化为uml文件，方便可视化
         String UMLString=GraphGenerator.convertToDotE("graph1", eventGroup);
-//        System.out.println(UMLString);
         GraphGenerator.graphWrite(UMLString);
-
     }
 }

@@ -35,10 +35,18 @@ public class GraphGenerator implements Generator {
      * 每个event的最大出边数量
      */
     private int num_maxOutEdge = 2;
-//    /**
-//     * 对event进行分组，属于同一个DAG的在一组
-//     */
-//    ArrayList<ArrayList<Event>> eventGroups = new ArrayList<>();
+    /**
+     * 边中上界或下界的取值范围的大小
+     */
+    private int boundRange = 3;
+    /**
+     * 边中的时序下界的最小值
+     */
+    private int min_lb = 4;
+    /**
+     * 边中的时序上界的最小值与时序下界的最大值的差值
+     */
+    private int diff_maxL_minU = 3;
     /**
      * 所有可用于生成动态环境模型的环境变量
      */
@@ -146,22 +154,6 @@ public class GraphGenerator implements Generator {
      * @param envGroup 给定的一组环境变量
      * @return 随机生成的一个event
      */
-//    public Event genEvent(int envGroupIndex) {
-//        boolean value;
-//        // the size of the selected set of environment variables
-//        int groupSize = envGroups.get(envGroupIndex).size();
-//        ArrayList<Integer> indexes = new ArrayList<>();
-//        for (int i = 0; i < num_literal; i++) {
-//            indexes.add(rm.nextInt(groupSize));
-//        }
-//        ArrayList<Literal> literals = new ArrayList<>();
-//        for (int i : indexes) {
-//            value = rm.nextBoolean();
-//            Literal literal = new Literal(envVariables.get(i), value);
-//            literals.add(literal);
-//        }
-//        return new Event(literals, eventNumber++);
-//    }
     private Event genEvent(ArrayList<String> envGroup) {
         boolean value;
         int index;
@@ -183,46 +175,58 @@ public class GraphGenerator implements Generator {
         return new Event(literals, eventNumber++);
     }
 
+    /**
+     * 给定一组event，随机将它们相连形成DAG
+     *
+     * @param events  给定的一组event
+     * @param edgeNum 指定的图中边的数量
+     * @return 生成的DAG中的“根”event
+     */
     private Event genGraph(ArrayList<Event> events, int edgeNum) {
         ArrayList<Edge> edgeSequence = new ArrayList<>();
         int fromIndex;
         int toIndex;
         int count = 0;
-        //对第一个节点之后的每一个节点v都随机选择一个u进行相连（u在v之前），确保改图是一个连通图
+        //上界与下界，后续将为边中的时序上下界赋值
+        int lb, ub;
+
+        //打印出所给定的events的名字
+        StringBuilder sbu = new StringBuilder();
+        events.forEach(event -> sbu.append("    ").append(event.getName()).append(";\n"));
+        System.out.println(sbu);
+
+        //对第一个节点之后的每一个节点v都随机选择一个u进行相连（u在v之前），确保该图是一个连通图
         for (int i = 1; i < events.size(); i++) {
             //头节点
             Event to = events.get(i);
             ArrayList<Event> firstAvailableFroms = new ArrayList<>();
             for (Event from : events.subList(0, i)) {
-                boolean satisfy = !(to.getFrom().contains(from)
-                        || from.getReachableEvents().contains(to)
-                        || from.upperLinkReachable(to)
-                        || to.lowerLinkReachable(from)
-                        || from.getOutEdges().size() >= num_maxOutEdge);
+                boolean satisfy = from.getOutEdges().size() < num_maxOutEdge;
                 if (satisfy) {
                     firstAvailableFroms.add(from);
                 }
             }
+
             if (firstAvailableFroms.size() > 0) {
                 //随机选择之前的一个节点作为尾节点
                 fromIndex = rm.nextInt(firstAvailableFroms.size());
                 Event from = firstAvailableFroms.get(fromIndex);
-//            //若俩节点已经是可达的，则继续搜索
-//            while (from.getReachableEvents().contains(to)) {
-//                fromIndex = rm.nextInt(i);
-//                from = events.get(fromIndex);
-//            }
                 to.getFrom().add(from);
                 from.getTo().add(to);
+
                 //添加新生成的边
-                Edge edge = new Edge(from, to);
+                lb = rm.nextInt(boundRange) + min_lb;
+                ub = rm.nextInt(boundRange) + min_lb + boundRange + diff_maxL_minU;
+                Edge edge = new Edge(from, to, lb, ub);
 //                edgeSequence.add(edge);
                 to.addInEdge(edge);
                 from.addOutEdge(edge);
-                //对尾节点递归地更新可达节点
+                //对尾节点向上递归地更新可达的节点
                 from.updateReachable(to);
+                //对头节点向下递归地更新可被达的节点
+                to.updateBeReachable(from);
                 count++;
-                System.out.println(edge.getFrom().getName() + "--->" + edge.getTo().getName());
+                System.out.println(edge.getFrom().getName() + "->" + edge.getTo().getName() + ";");
             }
         }
 
@@ -237,28 +241,38 @@ public class GraphGenerator implements Generator {
             //更新可作为头节点的event
             for (int i = 0; i < availableTos.size(); i++)
                 //如果该节点的入边数量超过上限，则将其移除
-                if (events.get(i).getInEdges().size() >= num_maxInEdge) availableTos.remove(i);
+                if (availableTos.get(i).getInEdges().size() >= num_maxInEdge) availableTos.remove(i);
+            StringBuilder sb = new StringBuilder();
             //如果有可作为头节点的event
             if (availableTos.size() > 0) {
+                availableTos.forEach(event -> sb.append("-").append(event.getName()));
+                System.out.println("the availableTos: " + sb);
                 //在availableTos中随机选择一个event作为头节点
                 toIndex = rm.nextInt(availableTos.size());
                 Event to = availableTos.get(toIndex);
-                System.out.println("to node selected: "+to.getName());
+                System.out.println("to node selected: " + to.getName());
                 //用于记录可作为尾节点的event
                 ArrayList<Event> secondAvailableFroms = new ArrayList<>();
 //                for (Event from : events.subList(0, events.indexOf(to)))
-                for (Event from : events){
-                    Event.checkFromTo(from,to,num_maxOutEdge);
+                for (Event from : events) {
+                    Event.checkFromTo(from, to, num_maxOutEdge);
                     boolean satisfy = !(to.equals(from)//检查是否相同
-                            ||to.getFrom().contains(from)//检查是否已经相连
+                            || to.getFrom().contains(from)//检查是否已经相连
                             || from.getReachableEvents().contains(to)//检查是否已经可达
+                            || to.getReachableEvents().contains(from)//检查是否已经可达
                             || from.upperLinkReachable(to)
                             || to.lowerLinkReachable(from)
                             || from.getOutEdges().size() >= num_maxOutEdge);
-                    if (satisfy) {
-                        System.out.println("this from node: "+from.getName()+" is applicable!!!!!!");
+                    boolean satisfy2 = !(to.equals(from)//检查是否相同
+                            || to.getFrom().contains(from)//检查是否已经相连
+                            || from.getReachableEvents().contains(to)//检查是否已经可达
+                            || to.getReachableEvents().contains(from)//检查是否已经可达
+                            || Event.groupDirectReachable(from, to)
+                            || from.getOutEdges().size() >= num_maxOutEdge);//检查边的数量是否满足要求
+                    if (satisfy2) {
+                        System.out.println("this from node: " + from.getName() + " is applicable!!!!!!");
                         secondAvailableFroms.add(from);
-                    }else System.out.println("this from node: "+from.getName()+" is not applicable");
+                    } else System.out.println("this from node: " + from.getName() + " is not applicable");
                 }
                 //对于选定的头节点，如果有可作为尾节点的event，则将其相连
                 if (secondAvailableFroms.size() > 0) {
@@ -268,14 +282,18 @@ public class GraphGenerator implements Generator {
                     to.getFrom().add(from);
                     from.getTo().add(to);
 
-                    Edge edge = new Edge(from, to);
-//                edgeSequence.add(edge);
+                    lb = rm.nextInt(boundRange) + min_lb;
+                    ub = rm.nextInt(boundRange) + min_lb + boundRange + diff_maxL_minU;
+                    Edge edge = new Edge(from, to, lb, ub);
 
                     to.addInEdge(edge);
                     from.addOutEdge(edge);
+                    System.out.println("connect two nodes: " + edge.getFrom().getName() + "--->" + edge.getTo().getName());
+                    System.out.println("lower bound: " + edge.getLb() + "----upper bound: " + edge.getUb());
                     //对尾节点递归地更新可达节点
                     from.updateReachable(to);
-                    System.out.println(edge.getFrom().getName() + "--->" + edge.getTo().getName());
+                    //对头节点向下递归地更新可被达的节点
+                    to.updateBeReachable(from);
                     count++;
                     //否则将该选中的头节从availableTos中移除
                 } else {
@@ -284,29 +302,30 @@ public class GraphGenerator implements Generator {
                 }
                 //如果availableTos为空，即没有可作为头节点的event
             } else {
-                System.out.println("no event to be selected as head node! break!");
-                break;
+                System.out.println("no event to be selected as head node! Clean up and try again to generate graph!");
+                ConnCleanUp(events);
+                return genGraph(events, edgeNum);
             }
 
 
-//            //记录搜索尾节点的次数（确定头节点后，随机搜索可用的尾节点）
-//            int searchCount = 0;
-//
-//            //如果这两个节点已经相连或者是可达或添加该边后会造成多余边，则继续搜索
-//            while (to.getFrom().contains(from) || from.getReachableEvents().contains(to) || from.upperLinkReachable(to)) {
-//                fromIndex = rm.nextInt(toIndex);
-//                from = events.get(fromIndex);
-//                searchCount++;
-//                //如果搜索次数过多，则放弃搜索，选择其它的节点作为头节点
-//                if (searchCount > 2 * toIndex) continue outer;
-//            }
-            //将选出的尾节点与头节点相连
-
         }
-//        for (Edge edge : edgeSequence) {
-//            System.out.println(edge.getFrom().getName()+"--->"+edge.getTo().getName());
-//        }
+
         return events.get(0);
+    }
+
+    /**
+     * 对一组event，清除它们之间的连接关系
+     *
+     * @param events 给定的一组event
+     */
+    public void ConnCleanUp(ArrayList<Event> events) {
+        for (Event event : events) {
+            event.getReachableEvents().clear();
+            event.getOutEdges().clear();
+            event.getInEdges().clear();
+            event.getTo().clear();
+            event.getFrom().clear();
+        }
     }
 
     /**
@@ -316,20 +335,6 @@ public class GraphGenerator implements Generator {
      * @param DAG       给定的DAG
      * @return
      */
-    public static String convertToDot(String graphName, List<Event> DAG) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("@startuml\n\n")
-                .append("digraph ").append(graphName).append(" {\n");
-        DAG.forEach(event -> sb.append("    ").append(event.getName()).append(";\n"));
-        sb.append("\n");
-        DAG.forEach(from -> from.getTo().forEach(to -> {
-            sb.append("    ").append(from.getName()).append(" -> ").append(to.getName()).append(";\n");
-        }));
-        sb.append("}\n")
-                .append("\n@enduml\n");
-        return sb.toString();
-    }
-
     public static String convertToDotE(String graphName, List<Event> DAG) {
         StringBuilder sb = new StringBuilder();
         sb.append("@startuml\n\n")
