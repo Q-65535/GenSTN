@@ -258,13 +258,6 @@ public class GraphGenerator implements Generator {
 //                for (Event from : events.subList(0, events.indexOf(to)))
                 for (Event from : events) {
                     Event.checkFromTo(from, to, num_maxOutEdge);
-//                    boolean satisfy = !(to.equals(from)//检查是否相同
-//                            || to.getFrom().contains(from)//检查是否已经相连
-//                            || from.getReachableEvents().contains(to)//检查是否已经可达
-//                            || to.getReachableEvents().contains(from)//检查是否已经可达
-//                            || from.upperLinkReachable(to)
-//                            || to.lowerLinkReachable(from)
-//                            || from.getOutEdges().size() >= num_maxOutEdge);
                     boolean satisfy2 = !(to.equals(from)//检查是否相同
                             || to.getFrom().contains(from)//检查是否已经相连
                             || from.getReachableEvents().contains(to)//检查是否已经可达
