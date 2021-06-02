@@ -131,43 +131,43 @@ public class Event {
         }
     }
 
-    /**
-     * 递归地检查该节点或其predecessors是否向指定的event直接相连(如果有的话，添加的这条边是多余边)
-     *
-     * @param event 指定的event
-     * @return true，如果直接相连
-     */
-    public boolean upperLinkReachable(Event event) {
-        if (!this.outEdges.isEmpty()) {
-            for (Edge edge : outEdges) {
-                if (edge.to.equals(event)) {
-                    return true;
-                }
-            }
-        }
-        if (!this.inEdges.isEmpty()) {
-            for (Edge edge : inEdges) {
-                if (edge.from.upperLinkReachable(event)) return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 检查指定的event是否向当前节点或当前节点的可达节点直接相连
-     *
-     * @param event 指定的event
-     * @return true，如果相连
-     */
-    public boolean lowerLinkReachable(Event event) {
-        if (this.getReachableEvents().size() > 0) {
-            if (event.getOutEdges().size() > 0)
-                for (Edge outEdge : event.getOutEdges()) {
-                    if (this.getReachableEvents().contains(outEdge.to)) return true;
-                }
-        }
-        return false;
-    }
+//    /**
+//     * 递归地检查该节点或其predecessors是否向指定的event直接相连(如果有的话，添加的这条边是多余边)
+//     *
+//     * @param event 指定的event
+//     * @return true，如果直接相连
+//     */
+//    public boolean upperLinkReachable(Event event) {
+//        if (!this.outEdges.isEmpty()) {
+//            for (Edge edge : outEdges) {
+//                if (edge.to.equals(event)) {
+//                    return true;
+//                }
+//            }
+//        }
+//        if (!this.inEdges.isEmpty()) {
+//            for (Edge edge : inEdges) {
+//                if (edge.from.upperLinkReachable(event)) return true;
+//            }
+//        }
+//        return false;
+//    }
+//
+//    /**
+//     * 检查指定的event是否向当前节点或当前节点的可达节点直接相连
+//     *
+//     * @param event 指定的event
+//     * @return true，如果相连
+//     */
+//    public boolean lowerLinkReachable(Event event) {
+//        if (this.getReachableEvents().size() > 0) {
+//            if (event.getOutEdges().size() > 0)
+//                for (Edge outEdge : event.getOutEdges()) {
+//                    if (this.getReachableEvents().contains(outEdge.to)) return true;
+//                }
+//        }
+//        return false;
+//    }
 
     /**
      * 给定两个event，from和to，检查from和其上层节点中是否有某个节点与to及其下层节点中的一个节点直接相连
@@ -203,8 +203,8 @@ public class Event {
         if (to.getFrom().contains(from)) System.out.println("two events are already connected");
         //检查是否已经可达
         if (from.getReachableEvents().contains(to)) System.out.println("two events are reachable");
-        if (from.upperLinkReachable(to)) System.out.println("upperLinkReachable");
-        if (to.lowerLinkReachable(from)) System.out.println("lowerLinkReachable");
+//        if (from.upperLinkReachable(to)) System.out.println("upperLinkReachable");
+//        if (to.lowerLinkReachable(from)) System.out.println("lowerLinkReachable");
         if (from.getOutEdges().size() >= num_maxOutEdge) System.out.println("exceed maximum number of outEdges");
     }
 

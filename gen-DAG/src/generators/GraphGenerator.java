@@ -26,15 +26,15 @@ public class GraphGenerator implements Generator {
     /**
      * 每个DAG中边的数量
      */
-    private int num_edge = 10;
+    private int num_edge = 14;
     /**
      * 每个event的最大入边数量
      */
-    private int num_maxInEdge = 2;
+    private int num_maxInEdge = 999;
     /**
      * 每个event的最大出边数量
      */
-    private int num_maxOutEdge = 2;
+    private int num_maxOutEdge = 999;
     /**
      * 边中上界或下界的取值范围的大小
      */
@@ -161,12 +161,14 @@ public class GraphGenerator implements Generator {
         int groupSize = envGroup.size();
         //索引，用来选择环境变量并构建一个event
         ArrayList<Integer> indexes = new ArrayList<>();
+        //选择出指定数量的环境变量
         while (indexes.size() < num_literal) {
             index = rm.nextInt(groupSize);
             while (indexes.contains(index)) index = rm.nextInt(groupSize);
             indexes.add(index);
         }
         ArrayList<Literal> literals = new ArrayList<>();
+        //给每个环境变量赋值
         for (int i : indexes) {
             value = rm.nextBoolean();
             Literal literal = new Literal(envGroup.get(i), value);
@@ -256,13 +258,13 @@ public class GraphGenerator implements Generator {
 //                for (Event from : events.subList(0, events.indexOf(to)))
                 for (Event from : events) {
                     Event.checkFromTo(from, to, num_maxOutEdge);
-                    boolean satisfy = !(to.equals(from)//检查是否相同
-                            || to.getFrom().contains(from)//检查是否已经相连
-                            || from.getReachableEvents().contains(to)//检查是否已经可达
-                            || to.getReachableEvents().contains(from)//检查是否已经可达
-                            || from.upperLinkReachable(to)
-                            || to.lowerLinkReachable(from)
-                            || from.getOutEdges().size() >= num_maxOutEdge);
+//                    boolean satisfy = !(to.equals(from)//检查是否相同
+//                            || to.getFrom().contains(from)//检查是否已经相连
+//                            || from.getReachableEvents().contains(to)//检查是否已经可达
+//                            || to.getReachableEvents().contains(from)//检查是否已经可达
+//                            || from.upperLinkReachable(to)
+//                            || to.lowerLinkReachable(from)
+//                            || from.getOutEdges().size() >= num_maxOutEdge);
                     boolean satisfy2 = !(to.equals(from)//检查是否相同
                             || to.getFrom().contains(from)//检查是否已经相连
                             || from.getReachableEvents().contains(to)//检查是否已经可达

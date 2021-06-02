@@ -24,7 +24,7 @@ public class Main {
             System.out.println(event.getLiterals());
         }
         //转化为uml文件，方便可视化
-        String UMLString=GraphGenerator.convertToDotE("graph1", eventGroup);
+        String UMLString = GraphGenerator.convertToDotE("graph1", eventGroup);
         GraphGenerator.graphWrite(UMLString);
     }
 }

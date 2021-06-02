@@ -24,7 +24,6 @@ public class Edge {
         this.lb = lb;
         this.ub = ub;
     }
-
     public Edge(Event from, Event to) {
         this.from = from;
         this.to = to;
