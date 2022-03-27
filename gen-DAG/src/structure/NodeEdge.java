@@ -1,14 +1,14 @@
 package structure;
 
-public class Edge {
+public class NodeEdge {
     /**
      * 该边的尾节点
      */
-    Event from;
+    Node from;
     /**
-     * 该边的头节点
+     * 改边的头节点
      */
-    Event to;
+    Node to;
     /**
      * from与to之间时序距离的下界
      */
@@ -18,30 +18,30 @@ public class Edge {
      */
     int ub;
 
-    public Edge(Event from, Event to, int lb, int ub) {
+    public NodeEdge(Node from, Node to, int lb, int ub) {
         this.from = from;
         this.to = to;
         this.lb = lb;
         this.ub = ub;
     }
-    public Edge(Event from, Event to) {
+    public NodeEdge(Node from, Node to) {
         this.from = from;
         this.to = to;
     }
 
-    public Event getFrom() {
+    public Node getFrom() {
         return from;
     }
 
-    public void setFrom(Event from) {
+    public void setFrom(Node from) {
         this.from = from;
     }
 
-    public Event getTo() {
+    public Node getTo() {
         return to;
     }
 
-    public void setTo(Event to) {
+    public void setTo(Node to) {
         this.to = to;
     }
 
